@@ -22,11 +22,20 @@ func NewHTTPClient() *http.Client {
 // RunScan queries LinkedIn, ITviec, and TopDev concurrently and scores all discovered jobs against the CV profile.
 func RunScan(req models.ScanRequest, profile models.CVProfile) ([]models.Job, models.ScanResult) {
 	keywords := req.Keywords
-	if len(keywords) == 0 {
+	usingDefault := len(keywords) == 0
+	if usingDefault {
 		keywords = profile.DefaultQueries
 	}
 	if len(keywords) == 0 {
 		keywords = []string{"Golang", "NodeJS", "NestJS", "AI Engineer"}
+	}
+
+	saraminKeywords := keywords
+	if usingDefault {
+		saraminKeywords = []string{
+			"Golang", "NodeJS", "TypeScript", "React", "Backend", "Fullstack",
+			"AI", "Engineer", "Developer", "Software", "DevOps", "Cloud", "Lập trình",
+		}
 	}
 
 	platformSet := map[string]bool{
@@ -81,7 +90,13 @@ func RunScan(req models.ScanRequest, profile models.CVProfile) ([]models.Job, mo
 				return taskResult{platform: "itviec", jobs: jobs, err: err}
 			})
 		}
-		if platformSet["topdev"] {
+	}
+	if platformSet["topdev"] {
+		for _, kw := range saraminKeywords {
+			q := strings.TrimSpace(kw)
+			if q == "" {
+				continue
+			}
 			query := q
 			tasks = append(tasks, func() taskResult {
 				jobs, err := ScrapeTopDev(client, query)

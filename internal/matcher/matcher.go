@@ -363,7 +363,7 @@ func ParseRawJobPost(req models.ImportJobRequest, profile models.CVProfile) mode
 			platform = "linkedin"
 		case strings.Contains(urlLower, "itviec.com"):
 			platform = "itviec"
-		case strings.Contains(urlLower, "topdev.vn"):
+		case strings.Contains(urlLower, "topdev.vn") || strings.Contains(urlLower, "saramin.vn"):
 			platform = "topdev"
 		case strings.Contains(rawLower, "threads"):
 			platform = "threads"
@@ -371,6 +371,8 @@ func ParseRawJobPost(req models.ImportJobRequest, profile models.CVProfile) mode
 			platform = "facebook"
 		case strings.Contains(rawLower, "topcv"):
 			platform = "topcv"
+		case strings.Contains(rawLower, "saramin"):
+			platform = "topdev"
 		default:
 			platform = "zalo"
 		}

@@ -289,10 +289,11 @@ function parseRawJobPostClient(req, profile) {
     else if (urlLower.includes("topcv.vn")) platform = "topcv";
     else if (urlLower.includes("linkedin.com")) platform = "linkedin";
     else if (urlLower.includes("itviec.com")) platform = "itviec";
-    else if (urlLower.includes("topdev.vn")) platform = "topdev";
+    else if (urlLower.includes("topdev.vn") || urlLower.includes("saramin.vn")) platform = "topdev";
     else if (rawLower.includes("threads")) platform = "threads";
     else if (rawLower.includes("facebook") || rawLower.includes("group")) platform = "facebook";
     else if (rawLower.includes("topcv")) platform = "topcv";
+    else if (rawLower.includes("saramin")) platform = "topdev";
     else platform = "zalo";
   }
 
@@ -464,12 +465,13 @@ function buildRadarMatrixClient(keyword, location, days) {
     },
     {
       platform: "topdev",
-      name: "TopDev",
-      badge: "Quét tự động (Live)",
-      tip: "TopDev đã được quét tự động qua luồng dữ liệu Next.js. Mở link dưới để lọc nâng cao.",
+      name: "Saramin (TopDev)",
+      badge: "Quét tự động (Live + Full JD)",
+      tip: "TopDev đã chuyển sang Saramin Vietnam (saramin.vn). Hệ thống tự động quét TP.HCM (region_ids=79) kèm Full JD.",
       links: [
-        { label: `TopDev Search: ${kw}`, description: "Tìm kiếm trực tiếp trên TopDev.vn", url: `https://topdev.vn/jobs/search?keyword=${enc(kw)}` },
-        { label: "TopDev AI & Fullstack Jobs", description: "Khám phá các vị trí AI Engineer / Fullstack trên TopDev", url: "https://topdev.vn/jobs/search?keyword=AI" },
+        { label: `Saramin TP.HCM: ${kw}`, description: "Tìm trực tiếp tại TP.HCM trên Saramin.vn", url: `https://saramin.vn/jobs/search?keyword=${enc(kw)}&region_ids=79` },
+        { label: "Saramin AI & Software Engineering TP.HCM", description: "Xem các vị trí AI / Software Engineer tại TP.HCM trên Saramin", url: "https://saramin.vn/jobs/search?keyword=AI&region_ids=79" },
+        { label: "Trang chủ Việc làm IT Saramin", description: "Khám phá danh mục việc làm công nghệ mới nhất trên saramin.vn", url: "https://saramin.vn/viec-lam-it" },
       ],
     },
   ];
@@ -645,7 +647,7 @@ async function cloudApi(path, opts = {}) {
 const PLATFORM_LABELS = {
   linkedin: "LinkedIn",
   itviec: "ITviec",
-  topdev: "TopDev",
+  topdev: "Saramin (TopDev)",
   topcv: "TopCV",
   threads: "Threads",
   facebook: "Facebook",
@@ -842,7 +844,7 @@ function renderKPIs(data) {
 
   const autoTotal = (pc.linkedin || 0) + (pc.itviec || 0) + (pc.topdev || 0);
   $("kpiAutoSources").textContent = autoTotal;
-  $("kpiAutoBreakdown").textContent = `LI: ${pc.linkedin || 0} • ITviec: ${pc.itviec || 0} • TopDev: ${pc.topdev || 0}`;
+  $("kpiAutoBreakdown").textContent = `LI: ${pc.linkedin || 0} • ITviec: ${pc.itviec || 0} • Saramin: ${pc.topdev || 0}`;
 
   const saved = sc.saved || 0;
   const applied = sc.applied || 0;

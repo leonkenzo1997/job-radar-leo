@@ -16,7 +16,9 @@ import (
 
 var (
 	reNextFChunk = regexp.MustCompile(`self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)`)
+	reRSCTextRef = regexp.MustCompile(`(?s)^([0-9a-fA-F]+):T[0-9a-fA-F]+,(.*)$`)
 	reTopDevJD   = regexp.MustCompile(`(?s)<(?:div|section)[^>]*class="[^"]*(?:prose|description|responsibilities)[^"]*"[^>]*>(.*?)</(?:div|section)>`)
+	reSaraminMeta = regexp.MustCompile(`^,"meta":\{"total":\d+,"per_page":\d+,"current_page":\d+,"last_page":(\d+)`)
 )
 
 type topDevCompany struct {
@@ -40,21 +42,23 @@ type topDevDate struct {
 }
 
 type topDevRawJob struct {
-	ID             int             `json:"id"`
-	OwnedID        int             `json:"owned_id"`
-	Title          string          `json:"title"`
-	DetailURL      string          `json:"detail_url"`
-	Slug           string          `json:"slug"`
-	Company        json.RawMessage `json:"company"`
-	SkillsArr      []string        `json:"skills_arr"`
-	SkillsStr      string          `json:"skills_str"`
-	JobTypesStr    string          `json:"job_types_str"`
-	JobLevelsStr   string          `json:"job_levels_str"`
-	ExperiencesStr string          `json:"experiences_str"`
-	Salary         *topDevSalary   `json:"salary"`
-	Addresses      *topDevAddresses `json:"addresses"`
-	Published      *topDevDate     `json:"published"`
-	Refreshed      *topDevDate     `json:"refreshed"`
+	ID                       int              `json:"id"`
+	OwnedID                  int              `json:"owned_id"`
+	Title                    string           `json:"title"`
+	DetailURL                string           `json:"detail_url"`
+	Slug                     string           `json:"slug"`
+	Company                  json.RawMessage  `json:"company"`
+	SkillsArr                []string         `json:"skills_arr"`
+	SkillsStr                string           `json:"skills_str"`
+	JobTypesStr              string           `json:"job_types_str"`
+	JobLevelsStr             string           `json:"job_levels_str"`
+	ExperiencesStr           string           `json:"experiences_str"`
+	Salary                   *topDevSalary    `json:"salary"`
+	Addresses                *topDevAddresses `json:"addresses"`
+	Published                *topDevDate      `json:"published"`
+	Refreshed                *topDevDate      `json:"refreshed"`
+	ResponsibilitiesOriginal string           `json:"responsibilities_original"`
+	RequirementsOriginal     string           `json:"requirements_original"`
 }
 
 func extractJSONArrayAt(src string, startBracket int) (string, bool) {
@@ -92,12 +96,32 @@ func extractJSONArrayAt(src string, startBracket int) (string, bool) {
 	return "", false
 }
 
-// ScrapeTopDev extracts keyword-matched and featured IT jobs from TopDev's Next.js RSC stream.
-func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
-	u := fmt.Sprintf("https://topdev.vn/jobs/search?keyword=%s", url.QueryEscape(query))
+func normalizeSaraminURL(u string) string {
+	u = strings.TrimSpace(u)
+	u = strings.ReplaceAll(u, "https://topdev.vn/detail-jobs/", "https://saramin.vn/detail-jobs/")
+	u = strings.ReplaceAll(u, "http://topdev.vn/detail-jobs/", "https://saramin.vn/detail-jobs/")
+	return u
+}
+
+func resolveRSCRef(val string, refs map[string]string) string {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return ""
+	}
+	if strings.HasPrefix(val, "$") {
+		if resolved, ok := refs[val]; ok {
+			return cleanHTMLMultiline(resolved)
+		}
+		return ""
+	}
+	return cleanHTMLMultiline(val)
+}
+
+func scrapeSaraminPage(client *http.Client, query string, page int) ([]models.Job, int, error) {
+	u := fmt.Sprintf("https://saramin.vn/jobs/search?keyword=%s&region_ids=79&page=%d", url.QueryEscape(query), page)
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		return nil, err
+		return nil, 1, err
 	}
 	req.Header.Set("User-Agent", defaultUA)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
@@ -105,19 +129,20 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 1, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("topdev status %d", resp.StatusCode)
+		return nil, 1, fmt.Errorf("saramin status %d", resp.StatusCode)
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
-		return nil, err
+		return nil, 1, err
 	}
 	htmlStr := string(b)
 
-	// Unescape Next.js RSC chunks into one stream
+	// Unescape Next.js RSC chunks and build $ref -> HTML text map
+	var chunks []string
 	var sb strings.Builder
 	for _, m := range reNextFChunk.FindAllStringSubmatch(htmlStr, -1) {
 		if len(m) < 2 {
@@ -125,15 +150,28 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 		}
 		var unescaped string
 		if err := json.Unmarshal([]byte(`"`+m[1]+`"`), &unescaped); err == nil {
+			chunks = append(chunks, unescaped)
 			sb.WriteString(unescaped)
 		}
 	}
 	full := sb.String()
 	if full == "" {
-		return nil, nil
+		return nil, 1, nil
 	}
 
-	// Pass 1: collect company objects keyed by company ID and job ID
+	rscRefs := make(map[string]string)
+	for i, ch := range chunks {
+		if m := reRSCTextRef.FindStringSubmatch(ch); len(m) >= 3 {
+			refID := "$" + m[1]
+			body := m[2]
+			if body == "" && i+1 < len(chunks) {
+				body = chunks[i+1]
+			}
+			rscRefs[refID] = body
+		}
+	}
+
+	// Collect company lookup across all job arrays, but keep ONLY actual search results (followed by ,"meta":{"total":)
 	companyByID := make(map[int]topDevCompany)
 	type jobCompanyLookup struct {
 		ID      int            `json:"id"`
@@ -141,6 +179,7 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 	}
 
 	var parsedJobs []topDevRawJob
+	lastPage := 1
 	searchFrom := 0
 	for {
 		idx := strings.Index(full[searchFrom:], `"jobs":[`)
@@ -154,29 +193,35 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 			continue
 		}
 
-		// Try decoding as full job array
+		// Record lightweight {id, company} lookup table
+		var lookupList []jobCompanyLookup
+		if err := json.Unmarshal([]byte(arrJSON), &lookupList); err == nil {
+			for _, item := range lookupList {
+				if item.Company != nil && item.Company.ID > 0 && item.Company.DisplayName != "" {
+					companyByID[item.Company.ID] = *item.Company
+				}
+			}
+		}
+
 		var rawList []topDevRawJob
 		if err := json.Unmarshal([]byte(arrJSON), &rawList); err == nil && len(rawList) > 0 {
 			for _, rj := range rawList {
-				// Record any inline company object
 				if len(rj.Company) > 0 && rj.Company[0] == '{' {
 					var comp topDevCompany
 					if err := json.Unmarshal(rj.Company, &comp); err == nil && comp.ID > 0 && comp.DisplayName != "" {
 						companyByID[comp.ID] = comp
 					}
 				}
-				if rj.Title != "" && rj.DetailURL != "" {
-					parsedJobs = append(parsedJobs, rj)
-				}
 			}
-		}
-
-		// Also try decoding lightweight {id, company} lookup table
-		var lookupList []jobCompanyLookup
-		if err := json.Unmarshal([]byte(arrJSON), &lookupList); err == nil {
-			for _, item := range lookupList {
-				if item.Company != nil && item.Company.ID > 0 && item.Company.DisplayName != "" {
-					companyByID[item.Company.ID] = *item.Company
+			after := full[arrStart+len(arrJSON):]
+			if mMeta := reSaraminMeta.FindStringSubmatch(after); len(mMeta) >= 2 {
+				if lp, err := strconv.Atoi(mMeta[1]); err == nil && lp > lastPage {
+					lastPage = lp
+				}
+				for _, rj := range rawList {
+					if rj.Title != "" && rj.DetailURL != "" {
+						parsedJobs = append(parsedJobs, rj)
+					}
 				}
 			}
 		}
@@ -207,7 +252,7 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 			}
 		}
 		if companyName == "" {
-			companyName = "TopDev Employer"
+			companyName = "Saramin Employer"
 		}
 
 		skills := rj.SkillsArr
@@ -224,7 +269,7 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 			salary = strings.TrimSpace(rj.Salary.Value)
 		}
 
-		location := "Vietnam"
+		location := "Hồ Chí Minh"
 		if rj.Addresses != nil {
 			if strings.TrimSpace(rj.Addresses.SortAddresses) != "" {
 				location = strings.TrimSpace(rj.Addresses.SortAddresses)
@@ -252,14 +297,24 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 		}
 
 		descParts := []string{}
+		metaLine := []string{}
 		if rj.JobLevelsStr != "" {
-			descParts = append(descParts, "Level: "+rj.JobLevelsStr)
+			metaLine = append(metaLine, "Level: "+rj.JobLevelsStr)
 		}
 		if rj.ExperiencesStr != "" {
-			descParts = append(descParts, "Kinh nghiệm: "+rj.ExperiencesStr)
+			metaLine = append(metaLine, "Kinh nghiệm: "+rj.ExperiencesStr)
 		}
 		if rj.SkillsStr != "" {
-			descParts = append(descParts, "Kỹ năng: "+rj.SkillsStr)
+			metaLine = append(metaLine, "Kỹ năng: "+rj.SkillsStr)
+		}
+		if len(metaLine) > 0 {
+			descParts = append(descParts, strings.Join(metaLine, " | "))
+		}
+		if respText := resolveRSCRef(rj.ResponsibilitiesOriginal, rscRefs); respText != "" {
+			descParts = append(descParts, "Mô tả công việc:\n"+respText)
+		}
+		if reqText := resolveRSCRef(rj.RequirementsOriginal, rscRefs); reqText != "" {
+			descParts = append(descParts, "Yêu cầu ứng viên:\n"+reqText)
 		}
 
 		jobs = append(jobs, models.Job{
@@ -273,19 +328,40 @@ func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
 			WorkMode:    workMode,
 			Salary:      salary,
 			PostedAt:    posted,
-			URL:         rj.DetailURL,
-			Description: strings.Join(descParts, " | "),
+			URL:         normalizeSaraminURL(rj.DetailURL),
+			Description: strings.Join(descParts, "\n\n"),
 			Skills:      skills,
 			Status:      "new",
 			QueryUsed:   query,
 			FetchedAt:   now,
 		})
 	}
-	return jobs, nil
+	return jobs, lastPage, nil
 }
 
-// FetchTopDevJobDetail tries to extract additional JD content from a TopDev detail URL.
+// ScrapeTopDev extracts keyword-matched TP.HCM IT jobs (with full JD) from Saramin Vietnam (saramin.vn).
+func ScrapeTopDev(client *http.Client, query string) ([]models.Job, error) {
+	allJobs, lastPage, err := scrapeSaraminPage(client, query, 1)
+	if err != nil {
+		return nil, err
+	}
+	maxPages := 3
+	if lastPage < maxPages {
+		maxPages = lastPage
+	}
+	for page := 2; page <= maxPages; page++ {
+		more, _, err := scrapeSaraminPage(client, query, page)
+		if err != nil {
+			break
+		}
+		allJobs = append(allJobs, more...)
+	}
+	return allJobs, nil
+}
+
+// FetchTopDevJobDetail tries to extract additional JD content from a Saramin/TopDev detail URL.
 func FetchTopDevJobDetail(client *http.Client, detailURL string) (string, error) {
+	detailURL = normalizeSaraminURL(detailURL)
 	req, err := http.NewRequest(http.MethodGet, detailURL, nil)
 	if err != nil {
 		return "", err
@@ -297,7 +373,7 @@ func FetchTopDevJobDetail(client *http.Client, detailURL string) (string, error)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("topdev detail status %d", resp.StatusCode)
+		return "", fmt.Errorf("saramin detail status %d", resp.StatusCode)
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {
@@ -305,7 +381,6 @@ func FetchTopDevJobDetail(client *http.Client, detailURL string) (string, error)
 	}
 	htmlStr := string(b)
 
-	// Extract RSC text payloads (> 120 chars containing HTML paragraphs/lists)
 	var sections []string
 	for _, m := range reNextFChunk.FindAllStringSubmatch(htmlStr, -1) {
 		if len(m) < 2 {
@@ -332,7 +407,7 @@ func FetchTopDevJobDetail(client *http.Client, detailURL string) (string, error)
 		}
 	}
 	if len(sections) == 0 {
-		return "", fmt.Errorf("topdev detail sections not found")
+		return "", fmt.Errorf("saramin detail sections not found")
 	}
 	return strings.Join(sections, "\n\n"), nil
 }

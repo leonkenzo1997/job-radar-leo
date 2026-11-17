@@ -155,8 +155,21 @@ func (s *Store) RunAndMergeScan(req models.ScanRequest) models.ScanResult {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	scannedSaramin := false
+	for _, st := range summary.Stats {
+		if st.Platform == "topdev" && st.Error == "" && st.Fetched > 0 {
+			scannedSaramin = true
+		}
+	}
+
+	preservedTopDev := make(map[string]models.Job)
 	for id, existing := range s.jobs {
 		if !matcher.IsHCMOrRemote(existing) {
+			delete(s.jobs, id)
+			continue
+		}
+		if scannedSaramin && existing.Platform == "topdev" {
+			preservedTopDev[id] = existing
 			delete(s.jobs, id)
 		}
 	}
@@ -168,7 +181,11 @@ func (s *Store) RunAndMergeScan(req models.ScanRequest) models.ScanResult {
 		if !matcher.IsHCMOrRemote(incoming) {
 			continue
 		}
-		if existing, ok := s.jobs[incoming.ID]; ok {
+		existing, ok := s.jobs[incoming.ID]
+		if !ok {
+			existing, ok = preservedTopDev[incoming.ID]
+		}
+		if ok {
 			// Preserve user workflow fields and richer fetched JD description
 			if existing.Status != "" {
 				incoming.Status = existing.Status
