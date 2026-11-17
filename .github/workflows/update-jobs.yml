@@ -1,0 +1,36 @@
+name: Update IT Jobs Radar (TP.HCM & Remote)
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Run live CV job scan
+        run: go run . -scan-once
+
+      - name: Commit and push updated jobs.json
+        run: |
+          if git diff --quiet data/jobs.json; then
+            echo "No changes in data/jobs.json"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/jobs.json
+          git commit -m "chore(data): auto-update TP.HCM & Remote IT jobs"
+          git push

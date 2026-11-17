@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leo Job Radar — Săn Job IT & Chấm Điểm CV 7 Nền Tảng</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">⚡</div>
+        <div>
+          <div class="brand-title">Leo Job Radar <span class="badge-live">7 Nền Tảng</span></div>
+          <div class="brand-sub" id="profileHeadline">Trương Tăng Quang (Leo) • Senior Backend &amp; Fullstack • AI-Native</div>
+        </div>
+      </div>
+
+      <div class="header-search-wrap">
+        <input
+          type="search"
+          id="globalSearch"
+          class="search-input"
+          placeholder="Tìm job theo tên, công ty, kỹ năng (Go, NestJS, RAG, Remote)..."
+          aria-label="Tìm kiếm việc làm"
+        />
+        <kbd class="kbd-hint">⌘K</kbd>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" id="btnScanCV" class="btn btn-primary">
+          <span id="scanSpinner" class="spinner hidden"></span>
+          🔄 Quét Job Tự Động
+        </button>
+        <button type="button" id="btnQuickImport" class="btn btn-secondary">
+          📥 Dán JD / Zalo / FB / Threads
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-wrap">
+    <!-- KPI Overview -->
+    <section class="kpi-grid" aria-label="Tổng quan việc làm">
+      <div class="kpi-card">
+        <div class="kpi-label">Tổng Job Thu Thập</div>
+        <div class="kpi-val" id="kpiTotal">0</div>
+        <div class="kpi-meta" id="kpiLastScan">Chưa quét phiên mới</div>
+      </div>
+      <div class="kpi-card kpi-highlight">
+        <div class="kpi-label">Khớp Cao Với CV (≥ 75%)</div>
+        <div class="kpi-val text-emerald" id="kpiHighMatch">0</div>
+        <div class="kpi-meta">Ưu tiên rải CV ngay</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Quét Live (LinkedIn • ITviec • TopDev)</div>
+        <div class="kpi-val" id="kpiAutoSources">0</div>
+        <div class="kpi-meta" id="kpiAutoBreakdown">LI: 0 • ITviec: 0 • TopDev: 0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pipeline Ứng Tuyển</div>
+        <div class="kpi-val text-violet" id="kpiPipeline">0</div>
+        <div class="kpi-meta" id="kpiPipelineMeta">Lưu: 0 • Đã nộp: 0 • PV: 0</div>
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="tabs-bar" role="tablist" aria-label="Điều hướng chính">
+      <button type="button" class="tab-btn active" data-tab="feed" role="tab" aria-selected="true">
+        🎯 Bảng Tin Job &amp; Chấm Điểm CV
+      </button>
+      <button type="button" class="tab-btn" data-tab="radar" role="tab" aria-selected="false">
+        🌐 Radar 7 Nền Tảng (Threads, FB, Zalo, TopCV...)
+      </button>
+      <button type="button" class="tab-btn" data-tab="importer" role="tab" aria-selected="false">
+        📥 Phân Tích JD / Tin Tuyển Dụng
+      </button>
+      <button type="button" class="tab-btn" data-tab="pipeline" role="tab" aria-selected="false">
+        📋 Quản Lý Ứng Tuyển &amp; CV
+      </button>
+    </nav>
+
+    <!-- TAB 1: JOB FEED -->
+    <section id="tab-feed" class="tab-panel active">
+      <div class="toolbar-card">
+        <div class="platform-pills" id="platformFilterPills">
+          <button type="button" class="pill active" data-platform="all">Tất cả <span class="pill-count" id="cnt-all">0</span></button>
+          <button type="button" class="pill" data-platform="linkedin">LinkedIn <span class="pill-count" id="cnt-linkedin">0</span></button>
+          <button type="button" class="pill" data-platform="itviec">ITviec <span class="pill-count" id="cnt-itviec">0</span></button>
+          <button type="button" class="pill" data-platform="topdev">TopDev <span class="pill-count" id="cnt-topdev">0</span></button>
+          <button type="button" class="pill" data-platform="topcv">TopCV <span class="pill-count" id="cnt-topcv">0</span></button>
+          <button type="button" class="pill" data-platform="threads">Threads <span class="pill-count" id="cnt-threads">0</span></button>
+          <button type="button" class="pill" data-platform="facebook">Facebook <span class="pill-count" id="cnt-facebook">0</span></button>
+          <button type="button" class="pill" data-platform="zalo">Zalo <span class="pill-count" id="cnt-zalo">0</span></button>
+        </div>
+
+        <div class="filters-row">
+          <select id="filterTrack" class="select-ctrl" aria-label="Lọc theo hướng CV">
+            <option value="all">Mọi hướng CV</option>
+            <option value="golang">Backend Golang &amp; Microservices</option>
+            <option value="node">Node.js / NestJS Backend</option>
+            <option value="ai-native">AI-Native (LLM / RAG / Agents)</option>
+            <option value="fullstack">Fullstack (Go/Node + React/Flutter)</option>
+            <option value="cloud">Cloud / DevOps &amp; Distributed</option>
+          </select>
+
+          <select id="filterWorkMode" class="select-ctrl" aria-label="Lọc hình thức làm việc">
+            <option value="all">Mọi hình thức (Remote/Hybrid/Office)</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="On-site">On-site</option>
+          </select>
+
+          <select id="filterMinScore" class="select-ctrl" aria-label="Điểm khớp tối thiểu">
+            <option value="0">Mọi mức độ khớp</option>
+            <option value="50">Khớp ≥ 50%</option>
+            <option value="65">Khớp ≥ 65%</option>
+            <option value="75">Khớp cao ≥ 75%</option>
+          </select>
+
+          <select id="filterStatus" class="select-ctrl" aria-label="Lọc trạng thái">
+            <option value="">Đang hiển thị (trừ Ẩn)</option>
+            <option value="new">Mới tìm thấy</option>
+            <option value="saved">⭐ Đã lưu</option>
+            <option value="applied">📨 Đã ứng tuyển</option>
+            <option value="interviewing">🎤 Phỏng vấn</option>
+            <option value="offer">🎉 Offer</option>
+            <option value="all">Tất cả (gồm cả Ẩn)</option>
+          </select>
+
+          <div class="custom-scan-inline">
+            <input type="text" id="customScanKeyword" class="input-sm" placeholder="Quét thêm từ khóa (vd: Golang Remote, LLM)" />
+            <button type="button" id="btnCustomScan" class="btn btn-sm btn-secondary">Quét thêm</button>
+          </div>
+        </div>
+
+        <div class="autoscan-bar">
+          <div class="autoscan-left">
+            <span id="autoScanDot" class="autoscan-dot on"></span>
+            <span id="autoScanLabel"><strong>Quét liên tục 24/7 (TP.HCM &amp; Remote):</strong> ĐANG BẬT</span>
+            <span class="muted" id="autoScanCountdown">Lần quét tiếp theo: --:--</span>
+          </div>
+          <div class="autoscan-controls">
+            <label for="autoScanInterval" class="muted">Chu kỳ:</label>
+            <select id="autoScanInterval" class="select-ctrl btn-sm">
+              <option value="5">Mỗi 5 phút</option>
+              <option value="10">Mỗi 10 phút</option>
+              <option value="15" selected>Mỗi 15 phút</option>
+              <option value="30">Mỗi 30 phút</option>
+              <option value="60">Mỗi 60 phút</option>
+            </select>
+            <button type="button" id="btnAutoScanToggle" class="btn btn-sm btn-secondary">Tạm dừng quét ngầm</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="scanBanner" class="scan-banner hidden"></div>
+      <div id="jobsList" class="jobs-list"></div>
+    </section>
+
+    <!-- TAB 2: 7-PLATFORM RADAR MATRIX -->
+    <section id="tab-radar" class="tab-panel">
+      <div class="radar-controls card">
+        <div class="radar-header-row">
+          <div>
+            <h2>🌐 Radar Săn Job Đa Nền Tảng Theo Thời Gian Thực</h2>
+            <p class="muted">
+              Kết hợp Deep-Link trực tiếp và Google X-Ray Search cho các nền tảng yêu cầu đăng nhập hoặc có Cloudflare (<strong>Threads, Facebook, Zalo, TopCV</strong>) cùng <strong>LinkedIn, ITviec, TopDev</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div class="radar-presets" id="radarPresets">
+          <button type="button" class="preset-chip active" data-kw="Golang">Golang</button>
+          <button type="button" class="preset-chip" data-kw="NodeJS NestJS">NodeJS / NestJS</button>
+          <button type="button" class="preset-chip" data-kw="AI Engineer LLM RAG">AI / LLM / RAG</button>
+          <button type="button" class="preset-chip" data-kw="Senior Backend">Senior Backend</button>
+          <button type="button" class="preset-chip" data-kw="Fullstack React">Fullstack React</button>
+          <button type="button" class="preset-chip" data-kw="Flutter">Flutter</button>
+        </div>
+
+        <div class="radar-form-row">
+          <input type="text" id="radarKeyword" class="input-ctrl" value="Golang" placeholder="Từ khóa kỹ năng hoặc vị trí..." />
+          <input type="text" id="radarLocation" class="input-ctrl" value="Ho Chi Minh" placeholder="Khu vực (Ho Chi Minh, Remote...)" />
+          <select id="radarDays" class="select-ctrl">
+            <option value="1">24 giờ qua</option>
+            <option value="7" selected>7 ngày qua</option>
+            <option value="30">30 ngày qua</option>
+          </select>
+          <button type="button" id="btnRefreshRadar" class="btn btn-primary">Cập nhật Link Radar</button>
+        </div>
+      </div>
+
+      <!-- TopCV Account Auto Sync Guide -->
+      <div class="topcv-sync-card">
+        <div class="topcv-sync-info">
+          <h3>🟢 Lấy Data TopCV Liên Tục Qua Tài Khoản Đang Đăng Nhập</h3>
+          <p class="muted" style="margin-top:4px;">
+            Vì TopCV bật tường lửa Cloudflare (HTTP 403 với script ngoài trình duyệt), bạn dùng tài khoản TopCV đã đăng nhập trên Chrome theo 1 trong 2 cách sau (hệ thống tự lọc chỉ lấy <strong>TP.HCM &amp; Remote</strong>):
+          </p>
+          <ul class="sync-steps">
+            <li><strong>Cách 1 — Chrome Extension (Tự động hoàn toàn 100%):</strong> Mở <code>chrome://extensions</code> → bật <em>Developer mode</em> → bấm <em>Load unpacked</em> → chọn thư mục <code class="code-pill">/Users/truongtangquang/Documents/CV/job-radar-leo/chrome-extension</code>. Sau đó mở trang TopCV đã đăng nhập và bật nút <strong>Auto-reload 10p</strong> ở góc dưới màn hình.</li>
+            <li><strong>Cách 2 — Bookmarklet 1-Click (Không cần cài Extension):</strong> Kéo nút tím bên dưới lên thanh dấu trang; khi xem bất kỳ trang tìm kiếm TopCV nào, bấm 1 cái là toàn bộ job trên trang sẽ tự đổ về đây.</li>
+          </ul>
+        </div>
+        <div class="topcv-sync-actions">
+          <a href="https://www.topcv.vn/viec-lam-phu-hop" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+            Mở TopCV: Việc phù hợp với bạn ↗
+          </a>
+          <a href="https://www.topcv.vn/tim-viec-lam-golang-tai-ho-chi-minh-kl2" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+            Mở TopCV: Golang TP.HCM ↗
+          </a>
+          <a href="https://www.topcv.vn/tim-viec-lam-backend-tai-ho-chi-minh-kl2" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+            Mở TopCV: Backend TP.HCM ↗
+          </a>
+        </div>
+      </div>
+
+      <!-- Bookmarklet Box -->
+      <div class="bookmarklet-card">
+        <div>
+          <h3>⚡ Bookmarklet 1-Click: Hút cả trang TopCV hoặc lưu bài Threads / Facebook / LinkedIn</h3>
+          <p class="muted">
+            Kéo nút tím bên phải thả lên thanh dấu trang (Bookmarks Bar) của Chrome/Safari. Khi đang ở trang danh sách TopCV sẽ tự quét hàng loạt nhiều job; khi đang ở Threads/Facebook/TopCV chi tiết sẽ phân tích bài đăng đó ngay!
+          </p>
+        </div>
+        <div class="bookmarklet-actions">
+          <a id="bookmarkletLink" href="#" class="btn btn-primary" title="Kéo thả lên thanh Bookmarks">
+            ⚡ Gửi Job về Leo Radar
+          </a>
+          <button type="button" id="btnCopyBookmarklet" class="btn btn-sm btn-secondary">Copy mã JS</button>
+        </div>
+      </div>
+
+      <div id="radarGrid" class="radar-grid"></div>
+    </section>
+
+    <!-- TAB 3: JD & SOCIAL POST IMPORTER / PARSER -->
+    <section id="tab-importer" class="tab-panel">
+      <div class="importer-layout">
+        <div class="card">
+          <div class="card-head-between">
+            <h2>📥 Dán Tin Tuyển Dụng (Zalo / FB / Threads / TopCV)</h2>
+            <button type="button" id="btnFillSamplePost" class="btn btn-sm btn-secondary">Dán tin mẫu Zalo</button>
+          </div>
+          <p class="muted mb-12">
+            Copy toàn bộ tin nhắn trong nhóm Zalo, bài đăng trên Threads/Facebook hoặc mô tả JD trên TopCV rồi dán vào đây. Hệ thống sẽ tự bóc tách kỹ năng, mức lương, SĐT Zalo/Email HR, chấm điểm khớp CV và soạn sẵn tin nhắn ứng tuyển.
+          </p>
+
+          <form id="importForm" class="import-form">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="impPlatform">Nền tảng nguồn</label>
+                <select id="impPlatform" class="select-ctrl">
+                  <option value="auto">Tự nhận diện từ link / nội dung</option>
+                  <option value="zalo">Zalo</option>
+                  <option value="threads">Threads</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="topcv">TopCV</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="itviec">ITviec</option>
+                  <option value="topdev">TopDev</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="impUrl">Link bài đăng / JD (nếu có)</label>
+                <input type="url" id="impUrl" class="input-ctrl" placeholder="https://www.topcv.vn/viec-lam/..." />
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="impTitle">Tiêu đề vị trí (bỏ trống sẽ tự tách dòng đầu)</label>
+                <input type="text" id="impTitle" class="input-ctrl" placeholder="Vd: Senior Golang / Node.js Engineer" />
+              </div>
+              <div class="form-group">
+                <label for="impCompany">Công ty / Team tuyển dụng</label>
+                <input type="text" id="impCompany" class="input-ctrl" placeholder="Vd: ABC Tech / HR Zalo" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="impRawText">Nội dung bài đăng / Mô tả công việc (JD)</label>
+              <textarea id="impRawText" rows="9" class="textarea-ctrl" placeholder="Dán toàn bộ nội dung tin tuyển dụng từ Zalo, Facebook, Threads hoặc TopCV tại đây..." required></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">🎯 Phân Tích, Chấm Điểm &amp; Lưu Job</button>
+              <button type="reset" class="btn btn-secondary">Xóa trắng</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" id="importResultCard">
+          <h2>📊 Kết Quả Phân Tích &amp; Tin Nhắn Ứng Tuyển</h2>
+          <div id="importResultBody" class="empty-state">
+            Dán một tin tuyển dụng ở khung bên trái và bấm <strong>Phân Tích</strong> để xem độ khớp với CV của Leo, kỹ năng khớp/thiếu và mẫu lời chào HR.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: PIPELINE & CV PROFILE -->
+    <section id="tab-pipeline" class="tab-panel">
+      <div class="kanban-board" id="kanbanBoard">
+        <div class="kanban-col">
+          <div class="kanban-col-head">⭐ Đã Lưu (<span id="kcnt-saved">0</span>)</div>
+          <div class="kanban-cards" id="kcol-saved"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-head">📨 Đã Ứng Tuyển (<span id="kcnt-applied">0</span>)</div>
+          <div class="kanban-cards" id="kcol-applied"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-head">🎤 Đang Phỏng Vấn (<span id="kcnt-interviewing">0</span>)</div>
+          <div class="kanban-cards" id="kcol-interviewing"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-head">🎉 Offer (<span id="kcnt-offer">0</span>)</div>
+          <div class="kanban-cards" id="kcol-offer"></div>
+        </div>
+      </div>
+
+      <div class="card mt-20">
+        <div class="card-head-between">
+          <div>
+            <h2>👤 Hồ Sơ CV Dùng Để Chấm Điểm (Trương Tăng Quang - Leo)</h2>
+            <p class="muted">Các nhóm kỹ năng trích từ CV thật của bạn. Bạn có thể chỉnh sửa trực tiếp và lưu để chấm điểm lại toàn bộ Job.</p>
+          </div>
+          <button type="button" id="btnSaveProfile" class="btn btn-primary btn-sm">💾 Lưu Hồ Sơ &amp; Chấm Điểm Lại</button>
+        </div>
+
+        <div class="profile-grid mt-12">
+          <div class="form-group">
+            <label for="profTier1">Tier 1 — Core Backend (Golang, Node.js, NestJS, TS...)</label>
+            <textarea id="profTier1" rows="3" class="textarea-ctrl"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="profTier2">Tier 2 — AI &amp; Agentic (LLM, RAG, MCP, GPT-4o, Gemini...)</label>
+            <textarea id="profTier2" rows="3" class="textarea-ctrl"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="profTier3">Tier 3 — Data, Messaging &amp; Cloud/DevOps</label>
+            <textarea id="profTier3" rows="3" class="textarea-ctrl"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="profTier4">Tier 4 — Frontend &amp; Testing (React, Flutter...)</label>
+            <textarea id="profTier4" rows="3" class="textarea-ctrl"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- JOB DETAIL & HR PITCH MODAL -->
+  <div id="jobModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="modal-badges" id="modalBadges"></div>
+          <h2 id="modalTitle">Chi tiết Job</h2>
+          <div class="muted" id="modalSub"></div>
+        </div>
+        <button type="button" id="modalClose" class="btn btn-sm btn-secondary" aria-label="Đóng">✕</button>
+      </div>
+
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

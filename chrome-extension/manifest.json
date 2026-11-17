@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Leo Job Radar — TopCV Auto Sync",
+  "version": "1.0.0",
+  "description": "Tự động trích xuất danh sách việc làm IT trên tài khoản TopCV đã đăng nhập (TP.HCM / Remote) và đồng bộ liên tục về Leo Job Radar (localhost:8090).",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://*.topcv.vn/*",
+    "http://localhost:8090/*",
+    "https://leonkenzo1997.github.io/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://*.topcv.vn/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
