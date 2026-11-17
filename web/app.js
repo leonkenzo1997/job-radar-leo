@@ -66,19 +66,6 @@ async function resolveBackendBase() {
     state.cloudMode = false;
     return;
   }
-  try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 1100);
-    const res = await fetch("http://localhost:8090/api/health", { signal: ctrl.signal });
-    clearTimeout(tid);
-    if (res.ok) {
-      state.apiBase = "http://localhost:8090";
-      state.cloudMode = false;
-      return;
-    }
-  } catch {
-    // Fallback to static GitHub Pages mode
-  }
   state.apiBase = "";
   state.cloudMode = true;
 }
