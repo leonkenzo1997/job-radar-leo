@@ -277,10 +277,12 @@ function parseRawJobPostClient(req, profile) {
     else if (urlLower.includes("linkedin.com")) platform = "linkedin";
     else if (urlLower.includes("itviec.com")) platform = "itviec";
     else if (urlLower.includes("topdev.vn") || urlLower.includes("saramin.vn")) platform = "topdev";
+    else if (urlLower.includes("vieclam24h.vn") || urlLower.includes("timviec24h")) platform = "vieclam24h";
     else if (rawLower.includes("threads")) platform = "threads";
     else if (rawLower.includes("facebook") || rawLower.includes("group")) platform = "facebook";
     else if (rawLower.includes("topcv")) platform = "topcv";
     else if (rawLower.includes("saramin")) platform = "topdev";
+    else if (rawLower.includes("vieclam24h") || rawLower.includes("timviec24h")) platform = "vieclam24h";
     else platform = "zalo";
   }
 
@@ -461,6 +463,16 @@ function buildRadarMatrixClient(keyword, location, days) {
         { label: "Trang chủ Việc làm IT Saramin", description: "Khám phá danh mục việc làm công nghệ mới nhất trên saramin.vn", url: "https://saramin.vn/viec-lam-it" },
       ],
     },
+    {
+      platform: "vieclam24h",
+      name: "Tìm Việc 24h (ViecLam24h)",
+      badge: "Quét tự động (Live + Full JD)",
+      tip: "Tìm Việc 24h (vieclam24h.vn) được quét tự động ngành IT Phần mềm tại TP.HCM kèm mức lương & mô tả chi tiết.",
+      links: [
+        { label: `Tìm Việc 24h IT TP.HCM: ${kw}`, description: "Tìm trực tiếp ngành IT Phần mềm tại TP.HCM trên vieclam24h.vn", url: `https://vieclam24h.vn/tim-kiem-viec-lam-nhanh?occupation_ids=8&province_ids=210000187&q=${enc(kw)}` },
+        { label: "Danh mục IT Phần mềm — Tìm Việc 24h", description: "Xem tất cả việc làm IT Phần mềm mới nhất trên vieclam24h.vn", url: "https://vieclam24h.vn/it-phan-mem-o8.html" },
+      ],
+    },
   ];
 }
 
@@ -593,7 +605,7 @@ async function cloudApi(path, opts = {}) {
     const qFilter = (u.searchParams.get("q") || "").toLowerCase();
     const minScore = Number(u.searchParams.get("minScore") || 0);
 
-    const platformCounts = { linkedin: 0, itviec: 0, topdev: 0, topcv: 0, threads: 0, facebook: 0, zalo: 0 };
+    const platformCounts = { linkedin: 0, itviec: 0, topdev: 0, vieclam24h: 0, topcv: 0, threads: 0, facebook: 0, zalo: 0 };
     const statusCounts = {};
     let highMatchCount = 0;
 
@@ -635,6 +647,7 @@ const PLATFORM_LABELS = {
   linkedin: "LinkedIn",
   itviec: "ITviec",
   topdev: "Saramin (TopDev)",
+  vieclam24h: "Tìm Việc 24h",
   topcv: "TopCV",
   threads: "Threads",
   facebook: "Facebook",
@@ -829,9 +842,9 @@ function renderKPIs(data) {
   $("kpiTotal").textContent = data.totalStored || 0;
   $("kpiHighMatch").textContent = data.highMatchCount || 0;
 
-  const autoTotal = (pc.linkedin || 0) + (pc.itviec || 0) + (pc.topdev || 0);
+  const autoTotal = (pc.linkedin || 0) + (pc.itviec || 0) + (pc.topdev || 0) + (pc.vieclam24h || 0);
   $("kpiAutoSources").textContent = autoTotal;
-  $("kpiAutoBreakdown").textContent = `LI: ${pc.linkedin || 0} • ITviec: ${pc.itviec || 0} • Saramin: ${pc.topdev || 0}`;
+  $("kpiAutoBreakdown").textContent = `LI: ${pc.linkedin || 0} • ITviec: ${pc.itviec || 0} • Saramin: ${pc.topdev || 0} • 24h: ${pc.vieclam24h || 0}`;
 
   const saved = sc.saved || 0;
   const applied = sc.applied || 0;

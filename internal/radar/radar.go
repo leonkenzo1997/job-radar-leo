@@ -239,5 +239,26 @@ func BuildRadarMatrix(keyword, location string, days int) []models.PlatformRadar
 				},
 			},
 		},
+		{
+			Platform:   "vieclam24h",
+			Name:       "Tìm Việc 24h (ViecLam24h)",
+			AccessMode: "auto-scrape",
+			Badge:      "Quét tự động (Live + Full JD)",
+			Tip:        "Tìm Việc 24h (vieclam24h.vn) được quét tự động ngành IT Phần mềm tại TP.HCM kèm mức lương và mô tả chi tiết.",
+			Links: []models.RadarLink{
+				{
+					Label:       fmt.Sprintf("Tìm Việc 24h IT TP.HCM: %s", kw),
+					Description: "Tìm trực tiếp ngành IT Phần mềm tại TP.HCM trên vieclam24h.vn",
+					URL:         "https://vieclam24h.vn/tim-kiem-viec-lam-nhanh?occupation_ids=8&province_ids=210000187&q=" + url.QueryEscape(kw),
+					Kind:        "direct",
+				},
+				{
+					Label:       "Danh mục IT Phần mềm — Tìm Việc 24h",
+					Description: "Xem tất cả việc làm IT Phần mềm mới nhất trên vieclam24h.vn",
+					URL:         "https://vieclam24h.vn/it-phan-mem-o8.html",
+					Kind:        "direct",
+				},
+			},
+		},
 	}
 }

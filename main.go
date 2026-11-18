@@ -422,7 +422,7 @@ func main() {
 		store.mu.RLock()
 		all := make([]models.Job, 0, len(store.jobs))
 		platformCounts := map[string]int{
-			"linkedin": 0, "itviec": 0, "topdev": 0,
+			"linkedin": 0, "itviec": 0, "topdev": 0, "vieclam24h": 0,
 			"topcv": 0, "threads": 0, "facebook": 0, "zalo": 0,
 		}
 		statusCounts := map[string]int{}
@@ -631,6 +631,10 @@ func main() {
 				case "topdev":
 					if job.URL != "" {
 						fetchedDesc, fetchErr = scrapers.FetchTopDevJobDetail(store.httpClient, job.URL)
+					}
+				case "vieclam24h":
+					if job.URL != "" {
+						fetchedDesc, fetchErr = scrapers.FetchViecLam24hJobDetail(store.httpClient, job.URL)
 					}
 				}
 				if fetchErr == nil && strings.TrimSpace(fetchedDesc) != "" {

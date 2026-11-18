@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leo Job Radar — Săn Job IT & Chấm Điểm CV 7 Nền Tảng</title>
+  <title>Leo Job Radar — Săn Job IT & Chấm Điểm CV 8 Nền Tảng</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <div class="brand">
         <div class="brand-logo" aria-hidden="true">⚡</div>
         <div>
-          <div class="brand-title">Leo Job Radar <span class="badge-live">7 Nền Tảng</span></div>
+          <div class="brand-title">Leo Job Radar <span class="badge-live">8 Nền Tảng</span></div>
           <div class="brand-sub" id="profileHeadline">Trương Tăng Quang (Leo) • Senior Backend &amp; Fullstack • AI-Native</div>
         </div>
       </div>
@@ -54,9 +54,9 @@
         <div class="kpi-meta">Ưu tiên rải CV ngay</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Quét Live (LinkedIn • ITviec • Saramin)</div>
+        <div class="kpi-label">Quét Live (LI • ITviec • Saramin • 24h)</div>
         <div class="kpi-val" id="kpiAutoSources">0</div>
-        <div class="kpi-meta" id="kpiAutoBreakdown">LI: 0 • ITviec: 0 • Saramin: 0</div>
+        <div class="kpi-meta" id="kpiAutoBreakdown">LI: 0 • ITviec: 0 • Saramin: 0 • 24h: 0</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Pipeline Ứng Tuyển</div>
@@ -71,7 +71,7 @@
         🎯 Bảng Tin Job &amp; Chấm Điểm CV
       </button>
       <button type="button" class="tab-btn" data-tab="radar" role="tab" aria-selected="false">
-        🌐 Radar 7 Nền Tảng (Threads, FB, Zalo, TopCV...)
+        🌐 Radar 8 Nền Tảng (Threads, FB, Zalo, TopCV, 24h...)
       </button>
       <button type="button" class="tab-btn" data-tab="importer" role="tab" aria-selected="false">
         📥 Phân Tích JD / Tin Tuyển Dụng
@@ -89,6 +89,7 @@
           <button type="button" class="pill" data-platform="linkedin">LinkedIn <span class="pill-count" id="cnt-linkedin">0</span></button>
           <button type="button" class="pill" data-platform="itviec">ITviec <span class="pill-count" id="cnt-itviec">0</span></button>
           <button type="button" class="pill" data-platform="topdev">Saramin (TopDev) <span class="pill-count" id="cnt-topdev">0</span></button>
+          <button type="button" class="pill" data-platform="vieclam24h">Tìm Việc 24h <span class="pill-count" id="cnt-vieclam24h">0</span></button>
           <button type="button" class="pill" data-platform="topcv">TopCV <span class="pill-count" id="cnt-topcv">0</span></button>
           <button type="button" class="pill" data-platform="threads">Threads <span class="pill-count" id="cnt-threads">0</span></button>
           <button type="button" class="pill" data-platform="facebook">Facebook <span class="pill-count" id="cnt-facebook">0</span></button>
@@ -261,6 +262,7 @@
                   <option value="linkedin">LinkedIn</option>
                   <option value="itviec">ITviec</option>
                   <option value="topdev">Saramin (TopDev)</option>
+                  <option value="vieclam24h">Tìm Việc 24h (vieclam24h.vn)</option>
                 </select>
               </div>
               <div class="form-group">

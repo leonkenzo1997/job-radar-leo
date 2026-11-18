@@ -38,10 +38,18 @@ func RunScan(req models.ScanRequest, profile models.CVProfile) ([]models.Job, mo
 		}
 	}
 
+	vl24hKeywords := keywords
+	if usingDefault {
+		vl24hKeywords = []string{
+			"Backend", "Fullstack", "NodeJS", "React", "Golang", "AI", "Lập trình", "Phần mềm", "DevOps",
+		}
+	}
+
 	platformSet := map[string]bool{
-		"linkedin": true,
-		"itviec":   true,
-		"topdev":   true,
+		"linkedin":   true,
+		"itviec":     true,
+		"topdev":     true,
+		"vieclam24h": true,
 	}
 	if len(req.Platforms) > 0 {
 		platformSet = make(map[string]bool)
@@ -104,6 +112,19 @@ func RunScan(req models.ScanRequest, profile models.CVProfile) ([]models.Job, mo
 			})
 		}
 	}
+	if platformSet["vieclam24h"] {
+		for _, kw := range vl24hKeywords {
+			q := strings.TrimSpace(kw)
+			if q == "" {
+				continue
+			}
+			query := q
+			tasks = append(tasks, func() taskResult {
+				jobs, err := ScrapeViecLam24h(client, query)
+				return taskResult{platform: "vieclam24h", jobs: jobs, err: err}
+			})
+		}
+	}
 
 	resultsCh := make(chan taskResult, len(tasks))
 	var wg sync.WaitGroup
@@ -163,7 +184,7 @@ func RunScan(req models.ScanRequest, profile models.CVProfile) ([]models.Job, mo
 	}
 
 	var stats []models.PlatformScanStat
-	for _, p := range []string{"linkedin", "itviec", "topdev"} {
+	for _, p := range []string{"linkedin", "itviec", "topdev", "vieclam24h"} {
 		if st, ok := statMap[p]; ok {
 			stats = append(stats, *st)
 		}
